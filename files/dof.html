@@ -1,0 +1,279 @@
+@extends('layouts.app')
+
+@section('title', $program->program_name)
+
+@section('content')
+
+@include('partials.program-hero', ['program' => $program])
+
+<section id="program-hero" class="bg-white dark:bg-[#121212]">
+<div class="max-w-7xl mx-auto px-4 py-10 space-y-10">
+
+ <!-- MAIN WRAPPER -->
+<div class="space-y-12 dark:bg-[#121212]">
+
+    <!-- ROW 1: OVERVIEW + GRAPH -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <!-- Overview -->
+        <div>
+            <h2 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-4 flex items-center gap-2">
+                <i data-lucide="book-check"></i> 
+                Program Overview
+            </h2>
+            <p class="text-gray-700 dark:text-gray-300">
+                {{ $program->overview->overview ?? 'No overview available.' }}
+            </p>
+        </div>
+
+        <!-- Graph -->
+        <div>
+            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">
+                📈 Program Trends (Last 5 Years)
+            </h2>
+            <canvas id="programTrendsChart" class="w-full h-[250px]"></canvas>
+        </div>
+
+    </div>
+
+    <!-- ROW 2: CAREERS (2/3) + MODULES (1/3) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Careers (2/3) -->
+        <div class="lg:col-span-2">
+            <h2 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-4 flex items-center gap-2">
+                <i data-lucide="briefcase-business"></i> 
+                Career Pathways
+            </h2>
+
+            <ul class="space-y-3">
+                @foreach($program->careers ?? [] as $career)
+                    <li class="text-gray-700 dark:text-gray-300 space-y-1 border-b border-gray-300 dark:border-gray-600 pb-3 mb-3 last:border-b-0 last:mb-0">
+                        
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="circle-check-big" class="text-sm"></i>  
+                            <span class="font-semibold">{{ $career->title }}</span>
+                        </div>
+
+                        <div class="text-md">
+                            {{ $career->description ?? 'No description' }}
+                        </div>
+
+                        @if($career->salary_min_ksh && $career->salary_max_ksh)
+                            <div class="text-md text-emerald-600 dark:text-emerald-400 font-bold">
+                                KES {{ number_format($career->salary_min_ksh) }} - {{ number_format($career->salary_max_ksh) }}
+                                <span class="text-gray-500 dark:text-gray-400 font-bold">
+                                    (USD {{ number_format($career->salary_min_usd) }} - {{ number_format($career->salary_max_usd) }})
+                                </span>
+                            </div>
+                        @endif
+
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+
+        <!-- Modules (1/3) -->
+        <div class="lg:col-span-1 space-y-6">
+            <h2 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-6 flex items-center gap-2">
+                <i data-lucide="clipboard-clock"></i>
+                Modules
+            </h2>
+
+            <div class="space-y-4">
+                @foreach($program->modules ?? [] as $module)
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden dark:bg-[#1e1e1e]">
+                        
+                        <button 
+                            onclick="toggleAccordion({{ $module->id }})"
+                            class="w-full flex justify-between items-center p-4 text-left font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#333333] transition">
+                            
+                            <span>{{ $module->module_name }}</span>
+                            <i id="icon-{{ $module->id }}" data-lucide="chevron-down" class="transition-transform"></i>
+                        
+                        </button>
+
+                        <div id="content-{{ $module->id }}" class="hidden px-5 pb-4 text-gray-600 dark:text-gray-400">
+                            {{ $module->description ?? 'No details available.' }}
+                        </div>
+
+                    </div>
+                @endforeach
+            </div>
+
+            <!-- BUTTON -->
+            <div class="flex flex-col items-center justify-center gap-4 mt-4">
+                <a href="https://portal.savannaheightscollege.com/courses?program={{ $program->url_link }}"      
+                   class="w-full inline-flex items-center justify-center gap-3 
+                          bg-red-500 hover:bg-red-600 
+                          text-white text-xl font-semibold px-8 py-4 rounded-xl
+                          shadow-md hover:shadow-xl
+                          transform hover:-translate-y-1 hover:scale-105
+                          transition-all duration-300">
+                    Enrol Now
+                    <i data-lucide="arrow-up-right" class="w-8 h-8"></i>
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+ 
+  <!-- RELATED PROGRAMS -->
+@if($relatedPrograms->count())
+<div class="max-w-7xl mx-auto px-4 py-10">
+    <h2 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-4 flex items-center gap-2">
+      <i data-lucide="library-big"></i> 
+        Related Programs
+    </h2>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        @foreach($relatedPrograms as $rel)
+        <a href="{{ url('programs/' . $rel->url_link) }}" class="group bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden transition hover:scale-105 hover:shadow-lg">
+            <div class="w-full h-48 overflow-hidden">
+                <img src="{{ asset('images/programs/' . ($rel->img_path ?? 'default.jpg')) }}" alt="{{ $rel->program_name }}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110">
+            </div>
+            <div class="p-4">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 group-hover:text-teal-600 dark:group-hover:text-emerald-400 transition">
+                    {{ $rel->program_name }}
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">{{ $rel->duration }}</p>
+            </div>
+        </a>
+        @endforeach
+    </div>
+</div>
+@endif
+
+</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+ <script>
+    const years = @json($trendYears ?? []);
+    const enrollments = @json($trendEnrollments ?? []);
+    const demand = @json($trendDemand ?? []);
+
+    const ctx = document.getElementById('programTrendsChart').getContext('2d');
+
+    // Gradient for enrollments (emerald)
+    const gradientGreen = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientGreen.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
+    gradientGreen.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+    // Gradient for employer demand (red)
+    const gradientRed = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientRed.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
+    gradientRed.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: years,
+            datasets: [
+                {
+                    label: 'Enrollments',
+                    data: enrollments,
+                    borderColor: '#10B981',
+                    backgroundColor: gradientGreen,
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#10B981',
+                },
+                {
+                    label: 'Employer Demand',
+                    data: demand,
+                    borderColor: '#EF4444',
+                    backgroundColor: gradientRed,
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#EF4444',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: false // ✅ no legends
+                },
+                tooltip: {
+                    backgroundColor: '#111827',
+                    titleColor: '#fff',
+                    bodyColor: '#d1d5db',
+                    borderColor: '#374151',
+                    borderWidth: 1,
+                    padding: 10
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false // ❌ remove vertical lines
+                    },
+                    ticks: {
+                        color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#4b5563'
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(156, 163, 175, 0.15)', // subtle horizontal lines
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#4b5563'
+                    },
+                    beginAtZero: true
+                }
+            },
+            elements: {
+                line: {
+                    borderJoinStyle: 'round'
+                }
+            },
+            animation: {
+                duration: 1400,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+</script>
+<!-- ACCORDION + COPY SCRIPT -->
+<script>
+  lucide.createIcons();
+  
+function toggleAccordion(id) {
+  const content = document.getElementById('content-' + id);
+  const icon = document.getElementById('icon-' + id);
+  content.classList.toggle('hidden');
+  icon.classList.toggle('rotate-180');
+}
+
+function copyLink(button) {
+  const url = window.location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    const text = button.querySelector('.btn-text');
+    text.innerText = "Copied!";
+    button.classList.add('bg-emerald-500', 'text-white');
+    button.querySelector('i').classList.replace('fa-link','fa-check');
+    setTimeout(() => {
+      text.innerText = "Copy Link";
+      button.classList.remove('bg-emerald-500', 'text-white');
+      button.querySelector('i').classList.replace('fa-check','fa-link');
+    }, 2000);
+  });
+}
+</script>
+
+@endsection
